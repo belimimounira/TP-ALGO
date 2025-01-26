@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+void hello(){
+}
+
 // Définition de la structure Patient
 typedef struct Patient {
     int id;
