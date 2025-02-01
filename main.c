@@ -2,9 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-void hello(){
-}
-
 // Définition de la structure Patient
 typedef struct Patient {
     int id;
@@ -140,28 +137,78 @@ void ajouterPatientUrgence(QueueUrgence *queue, Patienturgence patient) {
     printf("Patient urgent ajouté : %s %s avec priorité %d\n", patient.nom, patient.prenom, patient.priorite);
 }
 
-// Suppression d'un patient (retirer le premier de la file des réguliers)
-Patient retirerPatient(Queue *queue) {
-    Patient patientVide = {0, "", "", 0, "", ""}; // Patient vide par défaut
-
+// Suppression d'un patient ( de la file des réguliers)
+void supprimerPatient(Queue *queue, int id) {
     if (estVide(queue)) {
-        printf("La file est vide, aucun patient à retirer.\n");
-        return patientVide;
+        printf("La file est vide, aucun patient à supprimer.\n");
+        return;
     }
 
     Node *temp = queue->avant;
-    Patient patient = temp->patient;
-    queue->avant = queue->avant->suivant;
+    Node *precedent = NULL;
 
-    if (queue->avant == NULL) {
-        queue->arriere = NULL;
+    while (temp) {
+        if (temp->patient.id == id) {
+            if (precedent == NULL) {
+                // Suppression en tête
+                queue->avant = temp->suivant;
+            } else {
+                // Suppression en milieu ou en fin
+                precedent->suivant = temp->suivant;
+            }
+
+            if (temp == queue->arriere) {
+                // Mise à jour de l'arrière si le dernier élément est supprimé
+                queue->arriere = precedent;
+            }
+
+            free(temp);
+            printf("Patient avec ID %d supprimé avec succès.\n", id);
+            return;
+        }
+
+        precedent = temp;
+        temp = temp->suivant;
     }
 
-    free(temp);
-    printf("Patient retiré : %s %s\n", patient.nom, patient.prenom);
-    return patient;
+    printf("Patient avec ID %d introuvable.\n", id);
 }
+//  Suppression d'un patient ( de la file des urgence)
+void supprimerPatientUrgence(QueueUrgence *queue, int id) {
+    if (estVideUrgence(queue)) {
+        printf("La file des urgents est vide, aucun patient à supprimer.\n");
+        return;
+    }
 
+    NodeUrgence *temp = queue->avant;
+    NodeUrgence *precedent = NULL;
+
+    while (temp) {
+        if (temp->patient.id == id) {
+            if (precedent == NULL) {
+                // Suppression en tête
+                queue->avant = temp->suivant;
+            } else {
+                // Suppression en milieu ou en fin
+                precedent->suivant = temp->suivant;
+            }
+
+            if (temp == queue->arriere) {
+                // Mise à jour de l'arrière si le dernier élément est supprimé
+                queue->arriere = precedent;
+            }
+
+            free(temp);
+            printf("Patient urgent avec ID %d supprimé avec succès.\n", id);
+            return;
+        }
+
+        precedent = temp;
+        temp = temp->suivant;
+    }
+
+    printf("Patient urgent avec ID %d introuvable.\n", id);
+}
 // Afficher tous les patients dans la file des réguliers
 void afficherQueue(Queue *queue) {
     if (estVide(queue)) {
@@ -234,12 +281,54 @@ void afficherHistorique(Historique *historique) {
         temp = temp->suivant;
     }
 }
+// recharche un patient réguilie par ID
+void rechercherPatient(Queue *queue, int id) {
+    if (estVide(queue)) {
+        printf("La file est vide, aucun patient à rechercher.\n");
+        return;
+    }
+
+    Node *temp = queue->avant;
+
+    while (temp) {
+        if (temp->patient.id == id) {
+            Patient p = temp->patient;
+            printf("Patient trouvé :\n");
+            printf("ID: %d, Nom: %s, Prénom: %s, Âge: %d, Adresse: %s, Groupe Sanguin: %s\n",
+                   p.id, p.nom, p.prenom, p.age, p.adresse, p.groupeSanguin);
+            return;
+        }
+        temp = temp->suivant;
+    }
+
+    printf("Patient avec ID %d introuvable.\n", id);
+}
+
+// recharche les patients urgents par ID
+void rechercherPatientUrgence(QueueUrgence *queue, int id) {
+    if (estVideUrgence(queue)) {
+        printf("La file des urgents est vide.\n");
+        return;
+    }
+
+    NodeUrgence *temp = queue->avant;
+    while (temp) {
+        if (temp->patient.id == id) {
+            printf("Patient trouvé : ID: %d, Nom: %s, Prénom: %s, Âge: %d, Adresse: %s, Groupe Sanguin: %s, Priorité: %d\n",
+                   temp->patient.id, temp->patient.nom, temp->patient.prenom, temp->patient.age,
+                   temp->patient.adresse, temp->patient.groupeSanguin, temp->patient.priorite);
+            return;
+        }
+        temp = temp->suivant;
+    }
+
+    printf("Patient avec ID %d introuvable.\n", id);
+}
 
 int main() {
-    Queue queue, rqueue;
+    Queue queue;
     QueueUrgence urgenceQueue;
     initialiserQueue(&queue);
-    initialiserQueue(&rqueue);
     initialiserQueueUrgence(&urgenceQueue);
     Historique historique;
     initialiserHistorique(&historique);
@@ -249,10 +338,11 @@ int main() {
         printf("\n--- Menu ---\n");
         printf("1. Ajouter un patient\n");
         printf("2. Retirer un patient\n");
-        printf("3. Afficher les patients\n");
-        printf("4. Ajouter un patient urgent\n");
-        printf("5. Historique de consultation\n");
-        printf("6. Quitter\n");
+        printf("3. Recharche un patient\n");
+        printf("4. Afficher les patients\n");
+        printf("5. Urgence\n");
+        printf("6. Historique de consultation\n");
+        printf("7. Quitter\n");
         printf("Choix : ");
         scanf("%d", &choix);
 
@@ -278,36 +368,85 @@ int main() {
                 ajouterPatient(&queue, patient);
                 break;
             }
-            case 2:
-                retirerPatient(&queue);
-                break;
-            case 3:
-                afficherQueue(&queue);
-                break;
-            case 4: {
-                Patienturgence patientUrgence;
-                printf("\n--- Ajouter un Patient Urgent ---\n");
-                printf("ID : ");
-                scanf("%d", &patientUrgence.id);
-                printf("Nom : ");
-                scanf("%s", patientUrgence.nom);
-                printf("Prénom : ");
-                scanf("%s", patientUrgence.prenom);
-                printf("Âge : ");
-                scanf("%d", &patientUrgence.age);
-                printf("Adresse : ");
-                getchar(); // Consommer le retour à la ligne
-                fgets(patientUrgence.adresse, 100, stdin);
-                patientUrgence.adresse[strcspn(patientUrgence.adresse, "\n")] = '\0';
-                printf("Groupe Sanguin : ");
-                scanf("%s", patientUrgence.groupeSanguin);
-                printf("Priorité (1 = Élevée, 2 = Moyenne, 3 = Faible) : ");
-                scanf("%d", &patientUrgence.priorite);
-
-                ajouterPatientUrgence(&urgenceQueue, patientUrgence);
+            case 2: {
+                int id;
+                printf("enter ID de patient\n");
+                scanf("%d", &id);
+                supprimerPatient(&queue, id);
                 break;
             }
+            case 3: {
+                int id;
+                printf("enter ID de patient\n");
+                scanf("%d", &id);
+                rechercherPatient(&queue, id);
+                break;
+            }
+            case 4:
+                afficherQueue(&queue);
+                break;
             case 5: {
+                int choixurg;
+              do{
+                printf("\n--- Menu des Urgence ---\n");
+                    printf("1. Ajouter un patient urgent\n");
+                    printf("2. Retirer un patient urgent\n");
+                    printf("3. Recharche un patient urgent\n");
+                    printf("4. Afficher les patients urgents\n");
+                    printf("5. Retour au menu principal\n");
+                    printf("Choix : ");
+                    scanf("%d", &choixurg);
+                switch (choixurg) {
+                    case 1: {
+                              Patienturgence patientUrgence;
+                              printf("\n--- Ajouter un Patient Urgent ---\n");
+                              printf("ID : ");
+                              scanf("%d", &patientUrgence.id);
+                              printf("Nom : ");
+                              scanf("%s", patientUrgence.nom);
+                              printf("Prénom : ");
+                              scanf("%s", patientUrgence.prenom);
+                              printf("Âge : ");
+                              scanf("%d", &patientUrgence.age);
+                              printf("Adresse : ");
+                              getchar(); // Consommer le retour à la ligne
+                              fgets(patientUrgence.adresse, 100, stdin);
+                              patientUrgence.adresse[strcspn(patientUrgence.adresse, "\n")] = '\0';
+                              printf("Groupe Sanguin : ");
+                              scanf("%s", patientUrgence.groupeSanguin);
+                              printf("Priorité (1 = Élevée, 2 = Moyenne, 3 = Faible) : ");
+                              scanf("%d", &patientUrgence.priorite);
+
+                              ajouterPatientUrgence(&urgenceQueue, patientUrgence);
+                      break;
+                    }
+                    case 2: {
+                        int id;
+                             printf("enter ID de patient urgent");
+                             scanf("%d", &id);
+                             supprimerPatientUrgence(&urgenceQueue, id);
+                             break;
+                    }
+                    case 3: {
+                        int id;
+                             printf("enter ID de patient urgent\n");
+                             scanf("%d", &id);
+                             rechercherPatientUrgence(&urgenceQueue, id);
+                             break;
+                    }
+                    case 4: {
+                             afficherQueueUrgence(&urgenceQueue);
+                             break;
+                    }
+                    case 5:
+                             break;
+            default:
+                printf("Choix invalide, veuillez réessayer.\n");
+            }
+        }while(choixurg != 5);
+        break;
+            }
+            case 6: {
                 int choixHist;
                 do {
                     printf("\n--- Menu Historique des Consultations ---\n");
@@ -346,13 +485,14 @@ int main() {
                 } while (choixHist != 3);
                 break;
             }
-            case 6:
+            case 7:
                 printf("Au revoir !\n");
                 break;
             default:
                 printf("Choix invalide, veuillez réessayer.\n");
         }
-    } while (choix != 6);
 
+    } while (choix != 7);
     return 0;
-}
+    }
+
